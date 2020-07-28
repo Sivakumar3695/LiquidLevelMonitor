@@ -8,11 +8,21 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.os.AsyncTask;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 
 import androidx.annotation.Nullable;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class TankView extends View
 {
@@ -44,8 +54,12 @@ public class TankView extends View
         incomingWaterPipe.setColor(Color.WHITE);
         incomingWaterPipe.setStyle(Paint.Style.FILL);
 
+        HttpGetRequest httpGetRequest = new HttpGetRequest();
+        httpGetRequest.execute();
+
         incomingWaterPipeFlow.setColor(Color.parseColor("#a5f3eb"));
-        startWaterFlow();
+        //startWaterFlow();
+
     }
 
     @Override public void onDraw(Canvas canvas)
@@ -77,9 +91,9 @@ public class TankView extends View
         int rightTopOutletWaterLevel = getInletOutletWaterLevel(310, 340);
         canvas.drawRect((finalWidth*3/4),rightTopOutletWaterLevel,(finalWidth*3/4)+50,340, incomingWaterPipeFlow); // --> Right Top Outlet Water flow
 
-        if (mainWaterLevel <= 370 && !stopFlowInProgress)
+        if (mainWaterLevel <= 500 && !stopFlowInProgress)
         {
-            stopWaterFlow();
+            WaterLevelSimulatorActivity.motorToggle.setChecked(false);
         }
     }
 
@@ -99,6 +113,12 @@ public class TankView extends View
     public void startWaterFlow()
     {
         isWaterFlowInProgress = true;
+        stopFlowInProgress = false;
+
+        incomingPipe_1_Flow_Right = 100;
+        incomingPipe_2_Flow_Bottom = 345;
+        incomingPipe_2_Flow_Top = 345;
+
         final PropertyValuesHolder prop_pipe_1_right = PropertyValuesHolder.ofInt("PROP_PIPE_1_RIGHT", 100, incomingPipeRight-5);
         ObjectAnimator pipe1Animator = new ObjectAnimator();
         pipe1Animator.setValues(prop_pipe_1_right);
@@ -123,20 +143,21 @@ public class TankView extends View
             }
         });
 
-        final PropertyValuesHolder main_water_level_prop = PropertyValuesHolder.ofInt("MAIN_WATER_LEVEL_PROP", tankHeight, 200);
-        ObjectAnimator mainWaterLevelAnimator = new ObjectAnimator();
-        mainWaterLevelAnimator.setValues(main_water_level_prop);
-        mainWaterLevelAnimator.setDuration(2000);
-        mainWaterLevelAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                mainWaterLevel = (int) animation.getAnimatedValue("MAIN_WATER_LEVEL_PROP");
-                invalidate();
-            }
-        });
+//        final PropertyValuesHolder main_water_level_prop = PropertyValuesHolder.ofInt("MAIN_WATER_LEVEL_PROP", tankHeight, 200);
+//        ObjectAnimator mainWaterLevelAnimator = new ObjectAnimator();
+//        mainWaterLevelAnimator.setValues(main_water_level_prop);
+//        mainWaterLevelAnimator.setDuration(2000);
+//        mainWaterLevelAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+//            @Override
+//            public void onAnimationUpdate(ValueAnimator animation) {
+//                mainWaterLevel = (int) animation.getAnimatedValue("MAIN_WATER_LEVEL_PROP");
+//                invalidate();
+//            }
+//        });
 
-        startAnimator.playSequentially(pipe1Animator, pipe2Animator, mainWaterLevelAnimator);
+        startAnimator.playSequentially(pipe1Animator, pipe2Animator);
         startAnimator.start();
+        new HttpGetRequest().execute();
     }
 
     public void stopWaterFlow()
@@ -147,6 +168,9 @@ public class TankView extends View
         }
         stopFlowInProgress = true;
         isWaterFlowInProgress = false;
+
+        incomingPipe_2_Flow_Top = 345;
+        incomingPipe_1_Flow_top = 305;
 
         if (getInletOutletWaterLevel(300, 350) < 300)
         {
@@ -194,5 +218,74 @@ public class TankView extends View
         finalWidth = resolveSize(desiredWidth, widthMeasureSpec);
         finalHeight = resolveSize(desiredHeight, heightMeasureSpec);
         setMeasuredDimension(finalWidth, finalHeight);
+    }
+
+    public class HttpGetRequest extends AsyncTask<String, Void, String>
+    {
+        public static final String REQUEST_METHOD = "GET";
+        public static final int READ_TIMEOUT = 15000;
+        public static final int CONNECTION_TIMEOUT = 15000;
+        public static final String URL = "http://192.168.1.1/getDistance";
+        @Override
+        protected String doInBackground(String... params)
+        {
+            String result;
+            String inputLine;
+            try
+            {
+                //Create a URL object holding our url
+                URL myUrl = new URL(URL);
+                //Create a connection
+                HttpURLConnection connection =(HttpURLConnection) myUrl.openConnection();
+                //Set methods and timeouts
+                connection.setRequestMethod(REQUEST_METHOD);
+                connection.setReadTimeout(READ_TIMEOUT);
+                connection.setConnectTimeout(CONNECTION_TIMEOUT);
+
+                //Connect to our url
+                connection.connect();
+                //Create a new InputStreamReader
+                InputStreamReader streamReader = new InputStreamReader(connection.getInputStream());
+                //Create a new buffered reader and String Builder
+                BufferedReader reader = new BufferedReader(streamReader);
+                StringBuilder stringBuilder = new StringBuilder();
+                //Check if the line we are reading is not null
+                while((inputLine = reader.readLine()) != null)
+                {
+                    stringBuilder.append(inputLine);
+                }
+                //Close our InputStream and Buffered reader
+                reader.close();
+                streamReader.close();
+                //Set our result equal to our stringBuilder
+                result = stringBuilder.toString();
+                if (!stopFlowInProgress)
+                {
+                    mainWaterLevel = mainWaterLevel-(Integer.valueOf(result)/2);
+                    invalidate();
+                }
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+                result = null;
+            }
+            return result;
+        }
+        protected void onPostExecute(String result)
+        {
+            Handler repetitionHandler = new Handler();
+            if (isWaterFlowInProgress)
+            {
+                repetitionHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        new HttpGetRequest().execute();
+                        invalidate();
+                    }
+                }, 5000);
+                super.onPostExecute(result);
+            }
+        }
     }
 }
