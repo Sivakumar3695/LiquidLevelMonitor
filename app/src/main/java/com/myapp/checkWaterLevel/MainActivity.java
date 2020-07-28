@@ -119,6 +119,17 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    protected void onDestroy()
+    {
+        if (wifiManager != null)
+        {
+            wifiManager.disconnect();
+        }
+        super.onDestroy();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.CUPCAKE)
     public void connecToWifi(View view) throws Exception
     {
         wifiManager.setWifiEnabled(true);
@@ -220,6 +231,31 @@ public class MainActivity extends AppCompatActivity {
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
             return;
+        }
+        NetworkRequest.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new NetworkRequest.Builder();
+            //set the transport type do WIFI
+            builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+            builder.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET); // Internet not required
+
+            final ConnectivityManager connectivityManager = (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+
+                @RequiresApi(api = Build.VERSION_CODES.M)
+                @Override
+                public void onAvailable(Network network)
+                {
+                    connectivityManager.bindProcessToNetwork(network);
+                }
+
+                @Override
+                public void onUnavailable() {
+                    super.onUnavailable();
+                }
+            };
+            connectivityManager.registerNetworkCallback(builder.build(), networkCallback);
+
         }
         List<WifiConfiguration> wifiConfigList = wifiManager.getConfiguredNetworks();
         for (WifiConfiguration wifiConfiguration : wifiConfigList)
@@ -345,6 +381,7 @@ public class MainActivity extends AppCompatActivity {
         protected void onCancelled()
         {
             wifiButton.setClickable(true);
+            connectionProgressBar.setVisibility(View.INVISIBLE);
             failedConnection.setVisibility(View.VISIBLE);
             connectionTextView.setText("Connection to our Wifi failed. Please Turn ON NodeMCU Wifi.");
             super.onCancelled();
