@@ -17,4 +17,6 @@
     <string name="scan_failure_image">scan failure image</string>
     <string name="connection_failed_image">connection_failed_image</string>
     <string name="motor_on_off">Motor ON/OFF</string>
+    <string name="sensor_status_failure">Sensor status failure</string>
+    <string name="sensro_status_success">Sensro status success</string>
 </resources>

@@ -13,7 +13,6 @@ import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
-import android.widget.CompoundButton;
 import android.widget.Switch;
 
 import androidx.annotation.Nullable;
@@ -34,19 +33,26 @@ public class TankView extends View
 
     int tankHeight = 900;
 
-    int incomingPipeRight = 250;
-    int incomingPipe2Bottom = 400;
-    int incomingPipe_1_Flow_top = 305;
-    int incomingPipe_1_Flow_Right = 100;
-    int incomingPipe_2_Flow_Top = 345;
-    int incomingPipe_2_Flow_Bottom = 345;
-    int mainWaterLevel = tankHeight;//tankHeight;
+    int leftStart = 150;
+    int topStart = 200;
+    int rightMost;
+
+    int tankHeightEnd = topStart + tankHeight;
+    int incomingPipeRight = leftStart + 100;
+    int incomingPipe2Bottom = topStart + 200;
+    int incomingPipe_1_Flow_top = topStart + 105;
+    int incomingPipe_1_Flow_Right = leftStart -50;
+    int incomingPipe_2_Flow_Top = topStart + 145;
+    int incomingPipe_2_Flow_Bottom = topStart + 145;
+    int mainWaterLevel = tankHeightEnd;//tankHeight;
     boolean isWaterFlowInProgress = false;
     boolean stopFlowInProgress = false;
+    int multiplier = 10;
 
     AnimatorSet startAnimator = new AnimatorSet();
     AnimatorSet stopAnimator = new AnimatorSet();
 
+    int sensorFailureCount = 0;
 
     public TankView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -54,6 +60,15 @@ public class TankView extends View
         incomingWaterPipe.setColor(Color.WHITE);
         incomingWaterPipe.setStyle(Paint.Style.FILL);
 
+        if (finalWidth < 1000)
+        {
+            topStart = 100;
+            leftStart = 100;
+            tankHeight = 720;
+            multiplier = 8;
+        }
+
+        initPipeDimensions();
         HttpGetRequest httpGetRequest = new HttpGetRequest();
         httpGetRequest.execute();
 
@@ -62,36 +77,48 @@ public class TankView extends View
 
     }
 
+    private void initPipeDimensions()
+    {
+        tankHeightEnd = topStart + tankHeight;
+        incomingPipeRight = leftStart + 100;
+        incomingPipe2Bottom = topStart + 200;
+        incomingPipe_1_Flow_top = topStart + 105;
+        incomingPipe_1_Flow_Right = leftStart -50;
+        incomingPipe_2_Flow_Top = topStart + 145;
+        incomingPipe_2_Flow_Bottom = topStart + 145;
+        mainWaterLevel = tankHeightEnd;
+    }
+
     @Override public void onDraw(Canvas canvas)
     {
 //      Log.v("Test", "FinalWidth:" + finalWidth + ", FinalHeight:" + finalHeight);
         Log.v("Test", "Main Level:" + mainWaterLevel);
-        canvas.drawRect(150F,200F,finalWidth*3/4,tankHeight, paint);  //--> Main Tank
+        canvas.drawRect(leftStart,topStart,rightMost, tankHeightEnd, paint);  //--> Main Tank
 
         //the input for the following will be obtained from Bluetooth connected to Arduino!
-        canvas.drawRect(150F,mainWaterLevel,finalWidth*3/4,tankHeight, incomingWaterPipeFlow); //--> Main Tank filled with Water
+        canvas.drawRect(leftStart,mainWaterLevel,rightMost, tankHeightEnd, incomingWaterPipeFlow); //--> Main Tank filled with Water
 
-        canvas.drawRect(100F,(tankHeight)-100,150,(tankHeight)-50, paint); //--> Left Bottom Outlet
-        canvas.drawRect((finalWidth*3/4),300,(finalWidth*3/4)+50,350, paint); // --> Right Top Outlet
+        canvas.drawRect(leftStart - 50,(tankHeightEnd)-100,leftStart,(tankHeightEnd)-50, paint); //--> Left Bottom Outlet
+        canvas.drawRect((rightMost),topStart+30,(rightMost)+50,topStart+80, paint); // --> Right Top Outlet
 
-        canvas.drawRect(100,300,incomingPipeRight,350, incomingWaterPipe);// -> Incoming Water Pipe (horizontal)
-        canvas.drawRect(incomingPipeRight-50,350,incomingPipeRight,incomingPipe2Bottom, incomingWaterPipe);// --> Incoming water pipe (vertical)
+        canvas.drawRect(leftStart-50,topStart+100,incomingPipeRight,topStart+150, incomingWaterPipe);// -> Incoming Water Pipe (horizontal)
+        canvas.drawRect(incomingPipeRight-50,topStart+150,incomingPipeRight,incomingPipe2Bottom, incomingWaterPipe);// --> Incoming water pipe (vertical)
 
-        int incomingWaterPipe1Level = isWaterFlowInProgress ? 305 : stopFlowInProgress ? incomingPipe_1_Flow_top : getInletOutletWaterLevel(305, 345);
+        int incomingWaterPipe1Level = isWaterFlowInProgress ? topStart+105 : stopFlowInProgress ? incomingPipe_1_Flow_top : getInletOutletWaterLevel(topStart+105, topStart+145);
         int horizontalPipeFlowRight = isWaterFlowInProgress ? incomingPipe_1_Flow_Right : incomingPipeRight-5;
-        canvas.drawRect(100,incomingWaterPipe1Level, horizontalPipeFlowRight,345, incomingWaterPipeFlow); // --> Incoming water flow (horizontal)
+        canvas.drawRect(leftStart-50,incomingWaterPipe1Level, horizontalPipeFlowRight,topStart+145, incomingWaterPipeFlow); // --> Incoming water flow (horizontal)
 
         int incomingWaterPipe2Level = (isWaterFlowInProgress || stopFlowInProgress) ? incomingPipe_2_Flow_Top : getInletOutletWaterLevel(incomingPipe_2_Flow_Top, incomingPipe2Bottom);
         int verticalPipeFlowBottom = (isWaterFlowInProgress || stopFlowInProgress) ? incomingPipe_2_Flow_Bottom : incomingPipe2Bottom;
         canvas.drawRect(incomingPipeRight-45,incomingWaterPipe2Level,incomingPipeRight-5, verticalPipeFlowBottom, incomingWaterPipeFlow); // --> Incoming water flow (vertical)
 
-        int leftBottomOutletWaterLevel = getInletOutletWaterLevel(tankHeight-90, tankHeight-60);
-        canvas.drawRect(100F,leftBottomOutletWaterLevel,150, tankHeight-60, incomingWaterPipeFlow); //--> Left Bottom Outlet Water flow
+        int leftBottomOutletWaterLevel = getInletOutletWaterLevel(tankHeightEnd -90, tankHeightEnd -60);
+        canvas.drawRect(leftStart-50,leftBottomOutletWaterLevel,leftStart, tankHeightEnd -60, incomingWaterPipeFlow); //--> Left Bottom Outlet Water flow
 
-        int rightTopOutletWaterLevel = getInletOutletWaterLevel(310, 340);
-        canvas.drawRect((finalWidth*3/4),rightTopOutletWaterLevel,(finalWidth*3/4)+50,340, incomingWaterPipeFlow); // --> Right Top Outlet Water flow
+        int rightTopOutletWaterLevel = getInletOutletWaterLevel(topStart+40, topStart+70);
+        canvas.drawRect((rightMost),rightTopOutletWaterLevel,(rightMost)+50,topStart+70, incomingWaterPipeFlow); // --> Right Top Outlet Water flow
 
-        if (mainWaterLevel <= 500 && !stopFlowInProgress)
+        if (mainWaterLevel == topStart)
         {
             WaterLevelSimulatorActivity.motorToggle.setChecked(false);
         }
@@ -115,11 +142,11 @@ public class TankView extends View
         isWaterFlowInProgress = true;
         stopFlowInProgress = false;
 
-        incomingPipe_1_Flow_Right = 100;
-        incomingPipe_2_Flow_Bottom = 345;
-        incomingPipe_2_Flow_Top = 345;
+        incomingPipe_1_Flow_Right = leftStart-50;
+        incomingPipe_2_Flow_Bottom = topStart+145;
+        incomingPipe_2_Flow_Top = topStart+145;
 
-        final PropertyValuesHolder prop_pipe_1_right = PropertyValuesHolder.ofInt("PROP_PIPE_1_RIGHT", 100, incomingPipeRight-5);
+        final PropertyValuesHolder prop_pipe_1_right = PropertyValuesHolder.ofInt("PROP_PIPE_1_RIGHT", leftStart-50, incomingPipeRight-5);
         ObjectAnimator pipe1Animator = new ObjectAnimator();
         pipe1Animator.setValues(prop_pipe_1_right);
         pipe1Animator.setDuration(2000);
@@ -131,7 +158,7 @@ public class TankView extends View
             }
         });
 
-        final PropertyValuesHolder prop_pipe_2_bottom = PropertyValuesHolder.ofInt("PROP_PIPE_2_BOTTOM", 345, tankHeight);
+        final PropertyValuesHolder prop_pipe_2_bottom = PropertyValuesHolder.ofInt("PROP_PIPE_2_BOTTOM", topStart+145, tankHeightEnd);
         ObjectAnimator pipe2Animator = new ObjectAnimator();
         pipe2Animator.setValues(prop_pipe_2_bottom);
         pipe2Animator.setDuration(2000);
@@ -169,16 +196,16 @@ public class TankView extends View
         stopFlowInProgress = true;
         isWaterFlowInProgress = false;
 
-        incomingPipe_2_Flow_Top = 345;
-        incomingPipe_1_Flow_top = 305;
+        incomingPipe_2_Flow_Top = topStart+145;
+        incomingPipe_1_Flow_top = topStart+105;
 
-        if (getInletOutletWaterLevel(300, 350) < 300)
+        if (getInletOutletWaterLevel(topStart+100, topStart+150) < (topStart + 100))
         {
             return;
         }
 
-        int allowedTopValue = getInletOutletWaterLevel(305, 345);
-        final PropertyValuesHolder prop_pipe_1_top = PropertyValuesHolder.ofInt("PROP_PIPE_1_TOP", 305, allowedTopValue);
+        int allowedTopValue = getInletOutletWaterLevel(topStart+105, topStart+145);
+        final PropertyValuesHolder prop_pipe_1_top = PropertyValuesHolder.ofInt("PROP_PIPE_1_TOP", topStart+105, allowedTopValue);
         ObjectAnimator pipe1Animator = new ObjectAnimator();
         pipe1Animator.setValues(prop_pipe_1_top);
         pipe1Animator.setDuration(2000);
@@ -190,8 +217,8 @@ public class TankView extends View
             }
         });
 
-        int allowedBottomValue = getInletOutletWaterLevel(345, 400) < mainWaterLevel ? mainWaterLevel : getInletOutletWaterLevel(345, 400);
-        final PropertyValuesHolder prop_pipe_2_bottom = PropertyValuesHolder.ofInt("PROP_PIPE_2_TOP", 345, allowedBottomValue);
+        int allowedBottomValue = getInletOutletWaterLevel(topStart+145, topStart+200) < mainWaterLevel ? mainWaterLevel : getInletOutletWaterLevel(topStart+145, topStart+200);
+        final PropertyValuesHolder prop_pipe_2_bottom = PropertyValuesHolder.ofInt("PROP_PIPE_2_TOP", topStart+145, allowedBottomValue);
         ObjectAnimator pipe2Animator = new ObjectAnimator();
         pipe2Animator.setValues(prop_pipe_2_bottom);
         pipe2Animator.setDuration(2000);
@@ -217,6 +244,7 @@ public class TankView extends View
 
         finalWidth = resolveSize(desiredWidth, widthMeasureSpec);
         finalHeight = resolveSize(desiredHeight, heightMeasureSpec);
+        rightMost = finalWidth < 1000 ? finalWidth*9/10 : finalWidth*3/4;
         setMeasuredDimension(finalWidth, finalHeight);
     }
 
@@ -259,14 +287,21 @@ public class TankView extends View
                 streamReader.close();
                 //Set our result equal to our stringBuilder
                 result = stringBuilder.toString();
-                if (!stopFlowInProgress)
+                int resultInt = (Integer.valueOf(result));
+                if (!stopFlowInProgress && resultInt != 0)
                 {
-                    mainWaterLevel = mainWaterLevel-(Integer.valueOf(result)/2);
-                    invalidate();
+                    sensorFailureCount = 0;
+                    mainWaterLevel = topStart + (multiplier * resultInt);
                 }
+                else if (resultInt == 0)
+                {
+                    sensorFailureCount++;
+                }
+
             }
             catch(IOException e)
             {
+                sensorFailureCount++;
                 e.printStackTrace();
                 result = null;
             }
@@ -275,7 +310,18 @@ public class TankView extends View
         protected void onPostExecute(String result)
         {
             Handler repetitionHandler = new Handler();
-            if (isWaterFlowInProgress)
+
+            if (sensorFailureCount >= 5)
+                WaterLevelSimulatorActivity.setSensorStatus(WaterLevelSimulatorActivity.SensorStatus.NOT_WORKING.code);
+            else if (result != null && !result.equals("0"))
+            {
+                WaterLevelSimulatorActivity.setSensorStatus(WaterLevelSimulatorActivity.SensorStatus.WORKING.code);
+                invalidate();
+            }
+            else
+                WaterLevelSimulatorActivity.setSensorStatus(WaterLevelSimulatorActivity.SensorStatus.CHECKING.code);
+
+            if (isWaterFlowInProgress || (result == null || result.equals("0")))
             {
                 repetitionHandler.postDelayed(new Runnable() {
                     @Override
@@ -283,7 +329,7 @@ public class TankView extends View
                         new HttpGetRequest().execute();
                         invalidate();
                     }
-                }, 5000);
+                }, 3000);
                 super.onPostExecute(result);
             }
         }

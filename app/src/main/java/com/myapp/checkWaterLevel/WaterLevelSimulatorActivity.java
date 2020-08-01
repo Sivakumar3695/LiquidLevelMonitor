@@ -1,27 +1,26 @@
 package com.myapp.checkWaterLevel;
 
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.os.AsyncTask;
-import android.os.Build;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
-import android.os.Handler;
-import android.widget.CheckBox;
+import android.view.View;
 import android.widget.CompoundButton;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Switch;
-import android.widget.Toast;
-import android.widget.ToggleButton;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import android.widget.TextView;
 
 public class WaterLevelSimulatorActivity extends AppCompatActivity
 {
     public static Switch motorToggle;
+    public static ImageView sensorSuccess;
+    public static ImageView sensorFailure;
+    public static TextView sensorStatusText;
+    public static ProgressBar sensorStatusCheck;
+    private static boolean isCurrentSensorStatusSuccess;
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -30,6 +29,19 @@ public class WaterLevelSimulatorActivity extends AppCompatActivity
 
         motorToggle = (Switch) findViewById(R.id.motor_toggle);
         final TankView tankView = findViewById(R.id.custom_tank_view);
+        sensorSuccess = (ImageView) findViewById(R.id.sensor_status_success);
+        sensorFailure = (ImageView) findViewById(R.id.sensor_status_failure);
+        sensorStatusText = (TextView) findViewById(R.id.sensor_status_text);
+        sensorStatusCheck = (ProgressBar) findViewById(R.id.sensor_status_check);
+
+        sensorStatusCheck
+                .getIndeterminateDrawable()
+                .setColorFilter(Color.parseColor("#3916A4"), PorterDuff.Mode.SRC_IN);
+
+        if (isCurrentSensorStatusSuccess)
+        {
+            sensorSuccess.setVisibility(View.VISIBLE);
+        }
 
         motorToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -45,5 +57,50 @@ public class WaterLevelSimulatorActivity extends AppCompatActivity
             }
         });
 
+    }
+
+    public static void setSensorStatus(int sensorStatusCode)
+    {
+        if (sensorStatusCode == SensorStatus.WORKING.code)
+        {
+            if (isCurrentSensorStatusSuccess)
+            {
+                return;
+            }
+            isCurrentSensorStatusSuccess = true;
+            sensorSuccess.setVisibility(View.VISIBLE);
+            sensorFailure.setVisibility(View.INVISIBLE);
+            sensorStatusCheck.setVisibility(View.INVISIBLE);
+            sensorStatusText.setText("Sensor Working");
+        }
+        else if (sensorStatusCode == SensorStatus.NOT_WORKING.code)
+        {
+            isCurrentSensorStatusSuccess = false;
+            sensorSuccess.setVisibility(View.INVISIBLE);
+            sensorFailure.setVisibility(View.VISIBLE);
+            sensorStatusCheck.setVisibility(View.INVISIBLE);
+            sensorStatusText.setText("Problem in sensor data");
+        }
+        else if (sensorStatusCode == SensorStatus.CHECKING.code)
+        {
+            isCurrentSensorStatusSuccess = false;
+            sensorSuccess.setVisibility(View.INVISIBLE);
+            sensorFailure.setVisibility(View.INVISIBLE);
+            sensorStatusCheck.setVisibility(View.VISIBLE);
+            sensorStatusText.setText("Checking Sensor");
+        }
+    }
+
+    public enum SensorStatus
+    {
+        CHECKING(0),
+        WORKING(1),
+        NOT_WORKING(2);
+
+        public final int code;
+        SensorStatus(int statusCode)
+        {
+            this.code = statusCode;
+        }
     }
 }
