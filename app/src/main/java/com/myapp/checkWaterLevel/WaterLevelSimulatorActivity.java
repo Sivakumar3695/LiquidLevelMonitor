@@ -41,6 +41,8 @@ public class WaterLevelSimulatorActivity extends AppCompatActivity
         if (isCurrentSensorStatusSuccess)
         {
             sensorSuccess.setVisibility(View.VISIBLE);
+            sensorStatusText.setText("Sensor Working");
+
         }
 
         motorToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
