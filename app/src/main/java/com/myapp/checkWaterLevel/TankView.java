@@ -13,7 +13,6 @@ import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
-import android.widget.Switch;
 
 import androidx.annotation.Nullable;
 
@@ -28,6 +27,7 @@ public class TankView extends View
     Paint paint = new Paint();
     Paint incomingWaterPipe = new Paint();
     Paint incomingWaterPipeFlow = new Paint();
+    Paint waterLimit = new Paint();
     int finalWidth;
     int finalHeight;
 
@@ -48,6 +48,7 @@ public class TankView extends View
     boolean isWaterFlowInProgress = false;
     boolean stopFlowInProgress = false;
     int multiplier = 10;
+    int waterLimitForAlarm = topStart+100;
 
     AnimatorSet startAnimator = new AnimatorSet();
     AnimatorSet stopAnimator = new AnimatorSet();
@@ -59,6 +60,7 @@ public class TankView extends View
         paint.setColor(Color.LTGRAY);
         incomingWaterPipe.setColor(Color.WHITE);
         incomingWaterPipe.setStyle(Paint.Style.FILL);
+        waterLimit.setColor(Color.RED);
 
         if (finalWidth < 1000)
         {
@@ -87,6 +89,7 @@ public class TankView extends View
         incomingPipe_2_Flow_Top = topStart + 145;
         incomingPipe_2_Flow_Bottom = topStart + 145;
         mainWaterLevel = tankHeightEnd;
+        waterLimitForAlarm = topStart+100;
     }
 
     @Override public void onDraw(Canvas canvas)
@@ -117,6 +120,18 @@ public class TankView extends View
 
         int rightTopOutletWaterLevel = getInletOutletWaterLevel(topStart+40, topStart+70);
         canvas.drawRect((rightMost),rightTopOutletWaterLevel,(rightMost)+50,topStart+70, incomingWaterPipeFlow); // --> Right Top Outlet Water flow
+
+        canvas.drawLine(leftStart, topStart+100, rightMost, topStart+100, waterLimit);
+
+        int lineHeight = tankHeightEnd - (multiplier * 10);
+        int i = 1;
+        while (lineHeight > (topStart + (multiplier*10)))
+        {
+            canvas.drawLine(rightMost-10, lineHeight, rightMost, lineHeight, waterLimit);
+            canvas.drawText(String.valueOf(i), rightMost+5, lineHeight, waterLimit);
+            lineHeight = lineHeight - (multiplier * 10);
+            i++;
+        }
 
         if (mainWaterLevel == topStart)
         {
@@ -244,7 +259,16 @@ public class TankView extends View
 
         finalWidth = resolveSize(desiredWidth, widthMeasureSpec);
         finalHeight = resolveSize(desiredHeight, heightMeasureSpec);
-        rightMost = finalWidth < 1000 ? finalWidth*9/10 : finalWidth*3/4;
+        if (finalWidth < 1000)
+        {
+            rightMost = finalWidth*9/10;
+        }
+        else
+        {
+            rightMost = finalWidth*3/4;
+            waterLimit.setStyle(Paint.Style.STROKE);
+            waterLimit.setStrokeWidth(2);
+        }
         setMeasuredDimension(finalWidth, finalHeight);
     }
 
@@ -315,6 +339,10 @@ public class TankView extends View
                 WaterLevelSimulatorActivity.setSensorStatus(WaterLevelSimulatorActivity.SensorStatus.NOT_WORKING.code);
             else if (result != null && !result.equals("0"))
             {
+                if (mainWaterLevel <= waterLimitForAlarm && isWaterFlowInProgress)
+                {
+                    WaterLevelSimulatorActivity.startAlarmNow();
+                }
                 WaterLevelSimulatorActivity.setSensorStatus(WaterLevelSimulatorActivity.SensorStatus.WORKING.code);
                 invalidate();
             }

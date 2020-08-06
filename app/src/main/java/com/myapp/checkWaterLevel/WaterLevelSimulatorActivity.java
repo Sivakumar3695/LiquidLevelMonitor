@@ -1,16 +1,39 @@
 package com.myapp.checkWaterLevel;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Vibrator;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.io.IOException;
 
 public class WaterLevelSimulatorActivity extends AppCompatActivity
 {
@@ -20,6 +43,12 @@ public class WaterLevelSimulatorActivity extends AppCompatActivity
     public static TextView sensorStatusText;
     public static ProgressBar sensorStatusCheck;
     private static boolean isCurrentSensorStatusSuccess;
+
+    private static Context baseContext;
+    private static AlarmManager alarmManager;
+    private static MediaPlayer mMediaPlayer;
+    private static Vibrator vibrator;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -42,8 +71,11 @@ public class WaterLevelSimulatorActivity extends AppCompatActivity
         {
             sensorSuccess.setVisibility(View.VISIBLE);
             sensorStatusText.setText("Sensor Working");
-
         }
+
+        alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        baseContext = getBaseContext();
+        mMediaPlayer = new MediaPlayer();
 
         motorToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -54,11 +86,15 @@ public class WaterLevelSimulatorActivity extends AppCompatActivity
                 }
                 else
                 {
+                    if (mMediaPlayer.isPlaying())
+                    {
+                        mMediaPlayer.stop();
+                        vibrator.cancel();
+                    }
                     tankView.stopWaterFlow();
                 }
             }
         });
-
     }
 
     public static void setSensorStatus(int sensorStatusCode)
@@ -92,6 +128,50 @@ public class WaterLevelSimulatorActivity extends AppCompatActivity
             sensorStatusText.setText("Checking Sensor");
         }
     }
+
+    public static void startAlarmNow()
+    {
+        if (!mMediaPlayer.isPlaying())
+        {
+            vibrator = (Vibrator) baseContext.getSystemService(Context.VIBRATOR_SERVICE);
+            vibrator.vibrate(2000);
+
+            playSound(baseContext, getAlarmUri());
+        }
+    }
+
+    private static void playSound(Context context, Uri alert) {
+        mMediaPlayer = new MediaPlayer();
+        try {
+            mMediaPlayer.setDataSource(context, alert);
+            final AudioManager audioManager = (AudioManager) context
+                    .getSystemService(Context.AUDIO_SERVICE);
+            if (audioManager.getStreamVolume(AudioManager.STREAM_ALARM) != 0) {
+                mMediaPlayer.setAudioStreamType(AudioManager.STREAM_ALARM);
+                mMediaPlayer.prepare();
+                mMediaPlayer.start();
+            }
+        } catch (IOException e) {
+            System.out.println("OOPS");
+        }
+    }
+
+    //Get an alarm sound. Try for an alarm. If none set, try notification,
+    //Otherwise, ringtone.
+    private static Uri getAlarmUri() {
+        Uri alert = RingtoneManager
+                .getDefaultUri(RingtoneManager.TYPE_ALARM);
+        if (alert == null) {
+            alert = RingtoneManager
+                    .getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            if (alert == null) {
+                alert = RingtoneManager
+                        .getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+            }
+        }
+        return alert;
+    }
+
 
     public enum SensorStatus
     {

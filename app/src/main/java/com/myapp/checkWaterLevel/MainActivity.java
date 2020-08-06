@@ -246,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onAvailable(Network network)
                 {
-                    connectivityManager.bindProcessToNetwork(network);
+                    //connectivityManager.bindProcessToNetwork(network);
                 }
 
                 @Override
@@ -394,68 +394,4 @@ public class MainActivity extends AppCompatActivity {
             connectionTextView.setText("Connecting to Our wifi(NodeMCU)");
         }
     }
-//    @RequiresApi(api = Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
-//    public void connectToBluetooth(View view) throws Exception
-//    {
-//        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-//        if (bluetoothAdapter == null) {
-////            Intent intent = new Intent(this, WaterLevelSimulatorActivity.class);
-////            startActivity(intent);
-//            Toast.makeText(getApplicationContext(), "Unable to Connect BTooth", Toast.LENGTH_SHORT).show();
-//            return;
-//        }
-//        if (!bluetoothAdapter.isEnabled()) {
-//            int REQUEST_ENABLE_BT = 1;
-//            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-//            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-//        }
-//
-//        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
-//
-//        ConnectThread connectThread = null;
-//        if (pairedDevices.size() > 0) {
-//            // There are paired devices. Get the name and address of each paired device.
-//            for (BluetoothDevice device : pairedDevices) {
-//                String deviceName = device.getName();
-//                String deviceHardwareAddress = device.getAddress(); // MAC address
-//                if (deviceName.equals("Banu"))
-//                {
-//                    connectThread = new ConnectThread(device);
-//                    connectThread.run();
-//                    if (isConnected(device))
-//                    {
-//                        Toast.makeText(getApplicationContext(), "BTooth Connected", Toast.LENGTH_SHORT).show();
-//                        Intent intent = new Intent(this, WaterLevelSimulatorActivity.class);
-//                        startActivity(intent);
-//                    }
-//                    else
-//                    {
-////                        Intent intent = new Intent(this, WaterLevelSimulatorActivity.class);
-////                        startActivity(intent);
-//                        Toast.makeText(getApplicationContext(), "BTooth Connection failed", Toast.LENGTH_SHORT).show();
-//                        return;
-//                    }
-//                    break;
-//                }
-//            }
-//
-//        }
-//       /* if (connectThread != null)
-//        {
-//            String msg = "Hi Banu";
-//            connectThread.write(msg.getBytes());
-//            Toast.makeText(getApplicationContext(), "Msg Sent", Toast.LENGTH_SHORT).show();
-//
-//        }*/
-//    }
-//
-//    public static boolean isConnected(BluetoothDevice device) {
-//        try {
-//            Method m = device.getClass().getMethod("isConnected", (Class[]) null);
-//            boolean connected = (boolean) m.invoke(device, (Object[]) null);
-//            return connected;
-//        } catch (Exception e) {
-//            throw new IllegalStateException(e);
-//        }
-//    }
 }
